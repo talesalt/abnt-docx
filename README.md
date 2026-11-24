@@ -36,6 +36,17 @@ py -3 ~/.claude/skills/abnt-docx/scripts/md2abnt.py pasta_com_mds/ -o saida/
 
 Veja [SKILL.md](SKILL.md) para o mapeamento Markdown → ABNT e [references/regras-abnt.md](references/regras-abnt.md) para as regras, com a norma de origem de cada uma.
 
+## Revisão acadêmica do texto (opcional)
+
+Antes de converter, a skill pergunta se você quer melhorar o texto. Se disser sim, ela analisa o .md e mostra um **relatório numerado** do que não combina com texto acadêmico. Exemplos: texto todo em tópicos, linhas horizontais, emojis, comentários informais em itálico, rótulos de fichamento (**Conceito:**), excesso de negrito, setas e citações introduzidas por rótulo. Você marca quais correções quer, e ela grava um `arquivo_academico.md` (o original fica intacto) antes de gerar o .docx.
+
+```bash
+py -3 ~/.claude/skills/abnt-docx/scripts/revisar_md.py analisar resumo.md
+py -3 ~/.claude/skills/abnt-docx/scripts/revisar_md.py aplicar resumo.md --itens bullets,regua,notas-editoriais
+```
+
+A correção `bullets` transforma o 1º nível de tópicos em parágrafos corridos, e os subníveis sobem um nível. Itens marcados como `manual` (setas, chamadas de citação etc.) são reescritos pelo Claude, trecho por trecho.
+
 ## Como funciona
 
 1. Gera um modelo `reference.docx` com os estilos ABNT (a partir do modelo padrão do pandoc).
