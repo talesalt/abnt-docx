@@ -93,7 +93,7 @@ def analisar(texto: str):
         [m.group(0) for _, l in corpo if not eh_citacao(l) for m in NOTA_ED.finditer(l)])
     add("rotulos", "auto",
         "Rótulos de fichamento no início do parágrafo (**Conceito:**, **Exemplo:**): o rótulo sai, o texto fica",
-        [l for _, l in corpo if ROTULO.match(l) and ROTULO.sub("", l, 1).strip()], recomendado=False)
+        [l for _, l in corpo if ROTULO.match(l)], recomendado=False)
     neg = [m.group(0) for _, l in corpo if not eh_titulo(l) for m in NEGRITO.finditer(ROTULO.sub(r"\1", l, 1))]
     add("negrito", "auto",
         f"Negrito usado como ênfase no meio do texto ({len(neg)} trechos): vira texto normal",
@@ -202,6 +202,11 @@ def aplicar(texto: str, itens: set[str]):
                     total += k
         cont[chave] = total
 
+    # bullets primeiro: rótulos que eram itens de lista viram linhas soltas
+    if "bullets" in itens:
+        antes = sum(1 for _, l in blocos_texto(L) if MARCADOR.match(l))
+        L = tirar_primeiro_nivel(L)
+        cont["bullets"] = antes
     if "notas-editoriais" in itens:
         sub_linhas("notas-editoriais", NOTA_ED, "", lambda l: not eh_citacao(l))
     if "regua" in itens:
@@ -215,6 +220,12 @@ def aplicar(texto: str, itens: set[str]):
         sub_linhas("links-locais", LINK_LOCAL, r"\1")
     if "rotulos" in itens:
         sub_linhas("rotulos", ROTULO, r"\1", lambda l: bool(ROTULO.sub("", l, 1).strip()))
+        # rótulo genérico sozinho na linha (ex.: "**Conceitos:**" antes de uma lista) sai inteiro
+        sozinhos = [i for i, l in blocos_texto(L) if ROTULO.match(l) and not ROTULO.sub("", l, 1).strip()
+                    and not MARCADOR.match(l) and not re.search(r"\d", l)]
+        for i in reversed(sozinhos):
+            del L[i]
+        cont["rotulos"] += len(sozinhos)
     if "negrito" in itens:
         total = 0
         for i, l in list(blocos_texto(L)):
@@ -232,10 +243,6 @@ def aplicar(texto: str, itens: set[str]):
         sub_linhas("til", TIL, "aprox. ")
     if "exclamacao" in itens:
         sub_linhas("exclamacao", EXCL, ".", lambda l: not eh_citacao(l))
-    if "bullets" in itens:
-        antes = sum(1 for _, l in blocos_texto(L) if MARCADOR.match(l))
-        L = tirar_primeiro_nivel(L)
-        cont["bullets"] = antes
     # limpa espaços sobrando
     L = [re.sub(r"[ \t]+$", "", l) for l in L]
     return "\n".join(L).rstrip() + "\n", cont
